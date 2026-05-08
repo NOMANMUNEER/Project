@@ -1,25 +1,24 @@
 const Quiz = require('../models/Quiz');
 const Question = require('../models/Question');
 const Attempt = require('../models/Attempt');
+const mongoose = require('mongoose');
 
 // @desc    Get all quizzes with Search & Category filtering
-// @route   GET /api/quizzes?category=Islamic&search=prophet
+// @route   GET /api/quizzes
 exports.getQuizzes = async (req, res, next) => {
     try {
         const { category, search } = req.query;
         let query = {};
 
-        // 1. Category Filter: Agar category query mein hai
         if (category) {
-            query.category = { $regex: category, $options: 'i' }; // 'i' means case-insensitive
+            query.category = category;
         }
 
-        // 2. Search Filter: Agar title mein kuch search karna ho
         if (search) {
             query.title = { $regex: search, $options: 'i' };
         }
 
-        const quizzes = await Quiz.find(query);
+        const quizzes = await Quiz.find(query).populate('category', 'name');
 
         res.status(200).json({ 
             success: true, 
@@ -31,19 +30,64 @@ exports.getQuizzes = async (req, res, next) => {
     }
 };
 
-// @desc    Get random questions WITH correct answers
+// @desc    Get quizzes by category with pagination
+// @route   GET /api/categories/:categoryId/quizzes
+exports.getQuizzesByCategory = async (req, res, next) => {
+    try {
+        const { categoryId } = req.params;
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const startIndex = (page - 1) * limit;
+
+        const total = await Quiz.countDocuments({ category: categoryId });
+        const quizzes = await Quiz.find({ category: categoryId })
+                                  .populate('category', 'name')
+                                  .skip(startIndex)
+                                  .limit(limit);
+
+        res.status(200).json({
+            success: true,
+            count: quizzes.length,
+            pagination: {
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+                totalQuizzes: total
+            },
+            data: quizzes
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Get single quiz details
+// @route   GET /api/quizzes/:quizId
+exports.getQuizDetails = async (req, res, next) => {
+    try {
+        const quiz = await Quiz.findById(req.params.quizId).populate('category', 'name');
+        if (!quiz) {
+            return res.status(404).json({ success: false, message: 'Quiz not found' });
+        }
+        res.status(200).json({ success: true, data: quiz });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Get random questions EXCLUDING correct answers
+// @route   GET /api/quizzes/:quizId/questions
 exports.getQuizQuestions = async (req, res, next) => {
     try {
-        const quiz = await Quiz.findById(req.params.id);
-        if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
+        const quizId = req.params.quizId || req.params.id; // Support both :quizId and :id
+        const quiz = await Quiz.findById(quizId);
+        if (!quiz) return res.status(404).json({ success: false, message: 'Quiz not found' });
 
         const limit = parseInt(req.query.limit) || 20; 
 
-        // Ab hum correctAnswer bhi saath bhej rahe hain
         const questions = await Question.aggregate([
             { $match: { quiz: quiz._id } },
             { $sample: { size: limit } }
-            // $project mein correctAnswer ko 0 nahi kiya
         ]);
 
         res.status(200).json({ success: true, data: questions });
@@ -53,15 +97,20 @@ exports.getQuizQuestions = async (req, res, next) => {
 };
 
 // @desc    Save pre-calculated score from client
+// @route   POST /api/quizzes/:quizId/submit
 exports.submitQuiz = async (req, res, next) => {
     try {
-        // Ab client khud score bhej raha hai
-        const { quizId, score, correctCount, totalQuestions } = req.body;
+        const quizId = req.params.quizId || req.body.quizId;
+        const { score, correctCount, totalQuestions } = req.body;
+
+        const quiz = await Quiz.findById(quizId);
+        if (!quiz) return res.status(404).json({ success: false, message: 'Quiz not found' });
 
         const attempt = await Attempt.create({
             user: req.user.id,
             quiz: quizId,
-            score: score, // e.g. 80
+            category: quiz.category, // Save category for analytics
+            score: score,
             totalQuestions: totalQuestions,
             correctAnswersCount: correctCount
         });
@@ -69,6 +118,9 @@ exports.submitQuiz = async (req, res, next) => {
         res.status(201).json({
             success: true,
             message: 'Result saved successfully',
+            score: score,
+            correctAnswersCount: correctCount,
+            totalQuestions: totalQuestions,
             attemptId: attempt._id
         });
     } catch (error) {
@@ -80,10 +132,13 @@ exports.submitQuiz = async (req, res, next) => {
 // @route   GET /api/auth/history
 exports.getUserHistory = async (req, res, next) => {
     try {
-        // Sirf is logged-in user ki attempts nikalna aur quiz ka title bhi sath lana
         const history = await Attempt.find({ user: req.user.id })
-            .populate('quiz', 'title category') // Quiz model se title aur category uthana
-            .sort({ createdAt: -1 }); // Newest first
+            .populate({
+                path: 'quiz',
+                select: 'title',
+                populate: { path: 'category', select: 'name' }
+            })
+            .sort({ createdAt: -1 });
 
         res.status(200).json({
             success: true,

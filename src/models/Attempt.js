@@ -11,6 +11,10 @@ const attemptSchema = new mongoose.Schema({
         ref: 'Quiz',
         required: true
     },
+    category: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Category'
+    },
     score: {
         type: Number,
         required: true

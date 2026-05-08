@@ -100,3 +100,22 @@ exports.getUserHistory = async (req, res, next) => {
         next(error);
     }
 };
+
+// @desc    Get current logged-in user's profile
+// @route   GET /api/auth/me
+exports.getMe = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.user.id);
+        res.status(200).json({
+            success: true,
+            data: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};

@@ -10,6 +10,7 @@ require('dotenv').config();
 const authRoutes = require('./routes/authRoutes');
 const quizRoutes = require('./routes/quizRoutes');
 const adminRoutes = require('./routes/adminRoutes'); // New
+const categoryRoutes = require('./routes/categoryRoutes');
 
 const app = express();
 
@@ -34,9 +35,8 @@ mongoose.connect(process.env.MONGO_URI)
 // Routes Registration
 app.use('/api/auth', authRoutes);
 app.use('/api/quizzes', quizRoutes);
-app.use('/api/admin', adminRoutes); 
-
-
+app.use('/api/categories', categoryRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => res.send('FIA API Running'));
 

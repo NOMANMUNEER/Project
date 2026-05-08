@@ -11,8 +11,9 @@ const quizSchema = new mongoose.Schema({
         required: [true, 'Please add a description']
     },
     category: {
-        type: String,
-        default: 'General'
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Category',
+        required: [true, 'Please select a category']
     },
     totalQuestions: {
         type: Number,

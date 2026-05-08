@@ -6,12 +6,16 @@ const questionSchema = new mongoose.Schema({
         ref: 'Quiz',
         required: true
     },
+    category: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Category'
+    },
     questionText: { type: String, required: true },
     options: { type: [String], required: true },
-    // 'select: false' hata diya taake client-side checking ho sakay
+    // 'select: false' removed to allow client-side checking as requested
     correctAnswer: { 
         type: String, 
-        required: true 
+        required: true
     }
 });
 

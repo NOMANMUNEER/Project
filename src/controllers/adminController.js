@@ -24,6 +24,7 @@ exports.addQuestion = async (req, res, next) => {
 
         const question = await Question.create({
             quiz: quizId,
+            category: quiz.category, // Assign category from quiz for future random mock tests
             questionText,
             options,
             correctAnswer
