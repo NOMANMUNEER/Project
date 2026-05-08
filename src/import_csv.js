@@ -19,18 +19,20 @@ const importData = async () => {
         console.log('✅ Connected to MongoDB');
 
         // 1. Create/Find Quiz
-        let quiz = await Quiz.findOne({ title: 'Islamic Studies Preparation' });
-        if (!quiz) {
-            quiz = await Quiz.create({
-                title: 'Islamic Studies Preparation',
-                description: 'Complete Islamic Studies MCQs for FIA tests',
-                category: 'Islamic Studies'
-            });
-            console.log('✅ New Quiz Category Created');
-        }
+      
+let quiz = await Quiz.findOne({ title: 'General Knowledge Preparation' });
+
+if (!quiz) {
+     quiz = await Quiz.create({
+        title: 'General Knowledge Preparation',
+        description: 'Complete General Knowledge (GK) MCQs for FIA, CSS, and NTS Test Preparation',
+        category: 'GK' // Ab ye category GK hogi
+    });
+    console.log('✅ New Quiz Category (GK) Created');
+}
 
         const results = [];
-        const fileName = path.join(__dirname, 'islamic_mcqs.csv');
+        const fileName = path.join(__dirname, 'GK_mcqs.csv');
 
         if (!fs.existsSync(fileName)) {
             console.error(`❌ File not found: ${fileName}`);
